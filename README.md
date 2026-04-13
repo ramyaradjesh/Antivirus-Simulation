@@ -1,52 +1,104 @@
-# Basic Antivirus Simulation (Signature Scanner + VirusTotal)
+# MyAV — Basic Antivirus Simulation
 
-An educational Python project demonstrating how real antivirus engines work —
-with two-layer threat detection: local signature matching AND live VirusTotal
-cloud intelligence.
+A Python-based antivirus simulation demonstrating real-world security concepts
+through three-layer threat detection, VirusTotal cloud intelligence, heuristic
+analysis, email alerting, and a full GUI dashboard.
+
+Built as an educational project — every concept maps directly to how real AV
+engines like Windows Defender and CrowdStrike work.
 
 ---
 
-## What It Does
+## Three-Layer Detection Engine
 
-| Feature | Description |
+| Layer | Module | Method | Works offline? |
+|---|---|---|---|
+| Layer 1 | antivirus.py | SHA-256 hash vs signatures.json | Yes |
+| Layer 2 | virustotal_lookup.py | VirusTotal API — 70+ engines | No (needs internet) |
+| Layer 3 | heuristics.py | Pattern-based suspicious behaviour | Yes |
+
+Layer 1 catches known threats instantly.
+Layer 2 catches unknown threats via real cloud intelligence.
+Layer 3 catches brand new threats with no signature at all.
+
+---
+
+## What Each File Does
+
+| File | Purpose |
 |---|---|
-| File Hashing | Computes SHA-256 fingerprint of every file |
-| Layer 1 — Local DB | Compares hash against signatures.json instantly (offline) |
-| Layer 2 — VirusTotal | Checks unknown hashes against 70+ real AV engines via API |
-| Folder Scanner | Recursively scans every file in a directory tree |
-| Quarantine | Moves detected threats to an isolated folder (not deleted) |
-| Audit Logging | Appends every scan event with timestamp to scan_log.txt |
-| VT Cache | Saves VT results locally so the same hash is never queried twice |
-| GUI Dashboard | Browser-based interactive dashboard (dashboard.html) |
-| HTML Report | Full scan report with stats, file table, and log |
+| antivirus.py | Brain — controls all three layers, CLI entry point |
+| virustotal_lookup.py | Layer 2 — VirusTotal API integration with local cache |
+| heuristics.py | Layer 3 — double extension, dangerous location, size mismatch |
+| email_alert.py | Sends email alert when threat or suspicious file found |
+| demo_setup.py | Creates test_folder with clean and simulated malware files |
+| report_generator.py | Reads scan_log.txt and produces HTML scan report |
+| dashboard.html | Interactive browser GUI dashboard |
+| signatures.json | Local malware hash database (auto-created) |
+| vt_cache.json | VirusTotal results cache (auto-created) |
+| scan_log.txt | Timestamped audit log (auto-created) |
+| quarantine/ | Isolated threat files (auto-created) |
 
 ---
 
 ## Quick Start
 
-### Step 1 — Set up demo environment
+### 1. Install the only required library
+```
+pip install requests
+```
+
+### 2. Set up demo environment
 ```
 python antivirus.py setup-demo
 ```
 
-### Step 2 — Scan (local only)
+### 3. Run basic scan (Layer 1 + Layer 3)
 ```
 python antivirus.py scan test_folder/
 ```
 
-### Step 3 — Scan with VirusTotal (real intelligence)
+### 4. Run full scan (all three layers)
 ```
 python antivirus.py scan test_folder/ --virustotal
 ```
 
-### Step 4 — Scan and quarantine
+### 5. Scan and quarantine threats
 ```
 python antivirus.py scan test_folder/ --virustotal --quarantine
 ```
 
-### Step 5 — Generate HTML report
+### 6. Scan with email alerts
+```
+python antivirus.py scan test_folder/ --virustotal --quarantine --email
+```
+
+### 7. Generate HTML report
 ```
 python report_generator.py --log scan_log.txt --out report.html
+```
+
+### 8. Open dashboard
+Double-click dashboard.html in your file explorer to open in browser.
+
+---
+
+## All CLI Commands
+
+```
+python antivirus.py scan test_folder/                           Layer 1 + 3
+python antivirus.py scan test_folder/ --virustotal              All 3 layers
+python antivirus.py scan test_folder/ --virustotal --quarantine All 3 + quarantine
+python antivirus.py scan test_folder/ --virustotal --quarantine --email   Full power
+
+python antivirus.py scan file.exe                               Single file
+python antivirus.py list-sigs                                   View signatures
+python antivirus.py add-sig file.exe --label "Trojan.X"         Add signature
+python antivirus.py setup-demo                                  Create test files
+
+python heuristics.py                                            Test Layer 3 alone
+python email_alert.py                                           Test email setup
+python report_generator.py --log scan_log.txt --out report.html Generate report
 ```
 
 ---
@@ -57,113 +109,127 @@ python report_generator.py --log scan_log.txt --out report.html
 2. Click your username (top right) then My API key
 3. Copy the key
 4. Open virustotal_lookup.py and replace line 14:
-   VT_API_KEY = "PASTE_YOUR_KEY_HERE"
-5. Run: pip install requests
+   VT_API_KEY = "your_key_here"
+5. Done — free tier gives 4 lookups per minute, 500 per day
 
-Free tier: 4 lookups/minute, 500/day, 15,500/month.
-Already-checked hashes are cached in vt_cache.json automatically.
-
----
-
-## Signature Database
-
-```
-python antivirus.py list-sigs
-python antivirus.py add-sig file.exe --label "Trojan.X"
-```
+Results are cached in vt_cache.json so the same hash is never queried twice.
 
 ---
 
-## Project Structure
+## Email Alert Setup (optional)
 
-```
-antivirus_sim/
-|
-|-- antivirus.py            <- Main scanner, all core logic, CLI entry point
-|-- virustotal_lookup.py    <- VirusTotal API module (Layer 2 detection)
-|-- demo_setup.py           <- Creates demo test files and signatures
-|-- report_generator.py     <- Generates HTML scan report from log
-|-- dashboard.html          <- Interactive browser GUI dashboard
-|
-|-- signatures.json         <- Local malware hash database     (auto-created)
-|-- vt_cache.json           <- VT lookup cache                 (auto-created)
-|-- scan_log.txt            <- Timestamped audit log           (auto-created)
-|-- quarantine/             <- Isolated threat files           (auto-created)
-|
-`-- test_folder/            <- Demo scan target                (auto-created)
-    |-- documents/
-    |   |-- report.txt              clean
-    |   |-- notes.txt               clean
-    |   |-- resume.txt              clean
-    |   `-- invoice.pdf.exe         SIMULATED MALWARE
-    `-- downloads/
-        |-- installer.exe           clean
-        |-- photo.jpg               clean
-        |-- free_game.exe           SIMULATED MALWARE
-        `-- crack.zip               SIMULATED MALWARE
-```
+1. Open email_alert.py
+2. Fill in:
+   EMAIL_SENDER       = "yourgmail@gmail.com"
+   EMAIL_APP_PASSWORD = "your_16_char_app_password"
+   EMAIL_RECEIVER     = "yourgmail@gmail.com"
+   EMAIL_ENABLED      = True
+3. To get App Password:
+   myaccount.google.com > Security > 2-Step Verification > App Passwords > Mail
 
 ---
 
-## How It Works — Two-Layer Detection
+## Layer 3 Heuristic Checks
+
+### Check 1 — Double extension
+Catches files like invoice.pdf.exe where the real extension (.exe) is hidden
+behind a fake innocent-looking one (.pdf). Flags as HIGH severity.
+
+### Check 2 — Dangerous location
+Catches executable files (.exe .bat .vbs .ps1 etc) sitting inside Temp,
+AppData, or Recycle folders where legitimate software never lives.
+Flags as MEDIUM severity.
+
+### Check 3 — File size mismatch
+Catches files whose size makes no sense for their type.
+A .txt file that is 500MB or a .jpg that is 0 bytes is flagged.
+Flags as MEDIUM severity.
+
+---
+
+## Detection Flow
 
 ```
-File on Disk
+File on disk
      |
      v
-compute_hash()  --  SHA-256 fingerprint
+compute_hash() -- SHA-256 fingerprint
      |
      v
-LAYER 1: Check signatures.json        (offline, instant)
-     |-- MATCH  --> THREAT [LOCAL] --> quarantine --> log
-     |-- NO MATCH --> go to Layer 2
+Layer 1: signatures.json     -- known hash? --> THREAT [LOCAL]
+     | miss
+     v
+Layer 2: VirusTotal API      -- 3+ engines?  --> THREAT [VT]
+     | miss
+     v
+Layer 3: heuristics.py       -- looks bad?   --> SUSPICIOUS
+     | clean
+     v
+CLEAN
      |
-     v (only if --virustotal flag used)
-LAYER 2: VirusTotal API               (real cloud, 70+ engines)
-     |-- check vt_cache.json first
-     |-- if not cached --> call VT API --> cache result
-     |-- 3+ engines flagged --> THREAT [VIRUSTOTAL] --> quarantine --> log
-     `-- else --> CLEAN --> log
+     v (on any THREAT or SUSPICIOUS)
+email_alert.py  -->  sends email notification
+quarantine_file() -->  shutil.move to quarantine/
+log_event()  -->  write to scan_log.txt
 ```
+
+---
+
+## Statuses Explained
+
+| Status | Meaning | Action taken |
+|---|---|---|
+| CLEAN | No flags from any layer | Logged only |
+| THREAT | Confirmed by Layer 1 or 2 | Quarantine + email alert |
+| SUSPICIOUS | Layer 3 heuristic flags | Email alert, user decides |
+| ERROR | File not found or unreadable | Logged only |
 
 ---
 
 ## Key Concepts Demonstrated
 
-| Concept | Where in code |
+| Concept | Where in project |
 |---|---|
 | SHA-256 hashing | compute_hash() in antivirus.py |
 | Signature matching | scan_file() Layer 1 check |
-| Cloud threat intelligence | check_virustotal() in virustotal_lookup.py |
-| Rate limiting | time.sleep(15) between VT API calls |
-| Cache to save API quota | vt_cache.json in virustotal_lookup.py |
+| Cloud threat intelligence | virustotal_lookup.py |
+| API rate limiting | time.sleep(15) between VT calls |
+| Local cache for quota | vt_cache.json in virustotal_lookup.py |
+| Heuristic detection | heuristics.py — 3 pattern checks |
 | Quarantine (not delete) | quarantine_file() using shutil.move() |
-| Audit logging | log_event() append mode file write |
+| Audit logging | log_event() append mode |
 | Recursive folder scan | Path.rglob() in scan_folder() |
-| False negative limitation | Modified malware = new hash = evades Layer 1 |
+| False negative limitation | Modified file = new hash = evades Layer 1 |
+| Email notification | email_alert.py using smtplib |
+
+---
+
+## Project Roadmap
+
+### Completed
+- [x] Layer 1 — local signature scanning
+- [x] Layer 2 — VirusTotal API integration
+- [x] Layer 3 — heuristic detection engine
+- [x] Quarantine system
+- [x] Email alert notifications
+- [x] GUI browser dashboard
+- [x] HTML scan report generator
+- [x] VT result caching
+
+### Planned
+- [ ] Real-time folder monitoring (watchdog library)
+- [ ] Desktop GUI application (customtkinter)
+- [ ] System tray icon (pystray)
+- [ ] Encrypted quarantine (cryptography library)
+- [ ] Standalone .exe packaging (PyInstaller)
+- [ ] YARA rule scanning
 
 ---
 
 ## Notes
 
-- Educational use only — simulated malware files contain plain text, not real malware
-- Layer 2 requires internet connection and a free VirusTotal account
-- VT threshold is 3 engines to avoid false positives from noisy AV engines
-- Real AV engines also use heuristics and behavioural analysis on top of signatures
-
----
-
-## Extensions Completed
-
-- [x] VirusTotal API integration (real threat intelligence)
-- [x] GUI dashboard (dashboard.html)
-- [x] HTML report generator (report_generator.py)
-- [x] Local cache to protect API quota (vt_cache.json)
-
-## Further Extension Ideas
-
-1. Add YARA rule scanning for pattern-based detection
-2. Implement real-time folder monitoring with the watchdog library
-3. Add heuristic detection (double extensions like .pdf.exe, executables in temp)
-4. Encrypt quarantined files so they cannot accidentally execute
-5. Add email alerts when a threat is detected
+- Educational use only
+- Simulated malware files contain plain text — completely safe
+- Layer 2 requires internet and a free VirusTotal account
+- VT threshold is 3 engines to avoid false positives
+- SUSPICIOUS files are not auto-quarantined — user reviews manually
